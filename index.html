@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+
+    <title>Student Attendance</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #addStudentForm {
+            display: none;
+        }
+        #pdfHeader {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .pdfTable {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .pdfTable th,
+        .pdfTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .universityName {
+            font-size: 14px;
+            font-weight: bold;
+        }
+		.form-check-label {
+			border-color: #007bff;
+			border-radius: 6px; /* Border radius */
+			padding: 5px; /* Optional: Adjust the padding for better appearance */
+			display: inline-block; /* Optional: Ensure proper display with padding */
+			background-color: #0069d9;
+			color: white;
+			cursor: pointer;
+			margin: 12px;
+		}
+		.form-check-input {
+			visibility: hidden;
+		}
+		
+		
+		
+    </style>
+</head>
+<body>
+
+
+
+
+
+
+
+<div class="container">
+    <h2>Add Student</h2>
+    <button type="button" class="btn btn-primary mb-2" onclick="toggleAddStudentForm()">Add Student Manually</button>
+    <form id="addStudentForm">
+        <div class="form-group">
+            <label for="id">ID:</label>
+            <input type="text" class="form-control" id="id" required>
+        </div>
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" class="form-control" id="name" required>
+        </div>
+        <div class="form-group">
+            <label for="course">Course:</label>
+            <input type="text" class="form-control" id="course" required>
+        </div>
+        <div class="form-group">
+            <label for="semester">Semester:</label>
+            <input type="text" class="form-control" id="semester" required>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="addStudent()">Add Student</button>
+    </form>
+
+    <hr>
+
+    <h2>Student List</h2>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" id="presentFilter" onchange="filterPresent()">
+        <label class="form-check-label" for="presentFilter">Show Present Only</label>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Semester</th>
+                <th>Present</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody id="studentTableBody"></tbody>
+    </table>
+
+    <button type="button" class="btn btn-success" onclick="generatePDF()">Generate PDF</button>
+</div>
+
+
+
+<script>
+    // Function to prompt for password or security question
+    function authenticateUser() {
+        //change password
+		var _0x13c1=["\x45\x6E\x74\x65\x72\x20\x74\x68\x65\x20\x70\x61\x73\x73\x77\x6F\x72\x64\x3A"]; // Obfuscated string
+        var passwordPrompt=_0x13c1[0];
+        var userPassword=prompt(passwordPrompt);
+        
+        
+        // Check if the entered password is correct
+        if (userPassword === correctPassword) {
+            // If the password is correct, show the content
+            displayContent();
+        } else {
+            // If the password is incorrect, alert and reload the page
+            alert('Incorrect password. Please try again.');
+            location.reload();
+        }
+    }
+
+    // Function to display content after authentication
+    function displayContent() {
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+        let isAddStudentFormVisible = localStorage.getItem('isAddStudentFormVisible') === 'true';
+
+        // ... (The rest of your existing code for adding students, displaying tables, etc.)
+
+        // Display student table and add student form visibility on page load
+        displayStudentTable();
+    }
+
+    // Call the authentication function on page load
+    authenticateUser();
+</script>
+
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
+<script src="https://rawgit.com/eKoopmans/html2pdf/master/dist/html2pdf.bundle.js"></script>
+
+<script>
+    let students = JSON.parse(localStorage.getItem('students')) || [];
+    let isAddStudentFormVisible = localStorage.getItem('isAddStudentFormVisible') === 'true';
+
+    function addStudent() {
+        const id = document.getElementById("id").value;
+        const name = document.getElementById("name").value;
+        const course = document.getElementById("course").value;
+        const semester = document.getElementById("semester").value;
+
+        if (!id || !name || !semester) {
+            alert("Please fill in ID, Name, and Semester fields.");
+            return;
+        }
+
+        students.push({ id, name, course, semester, present: false });
+        localStorage.setItem('students', JSON.stringify(students));
+
+        // Show the add student form after adding a student
+        isAddStudentFormVisible = true;
+        localStorage.setItem('isAddStudentFormVisible', 'true');
+
+        displayStudentTable();
+        clearForm();
+    }
+
+    function toggleAddStudentForm() {
+        // Toggle the visibility of the add student form
+        isAddStudentFormVisible = !isAddStudentFormVisible;
+        localStorage.setItem('isAddStudentFormVisible', isAddStudentFormVisible.toString());
+
+        // Clear form when toggling
+        clearForm();
+
+        // Display student table with or without the add student form
+        displayStudentTable();
+    }
+
+    function togglePresent(index) {
+        students[index].present = !students[index].present;
+        localStorage.setItem('students', JSON.stringify(students));
+        displayStudentTable();
+    }
+
+    function deleteStudent(index) {
+        students.splice(index, 1);
+        localStorage.setItem('students', JSON.stringify(students));
+        displayStudentTable();
+    }
+
+    function filterPresent() {
+        const presentFilter = document.getElementById("presentFilter");
+        displayStudentTable(presentFilter.checked);
+    }
+
+    function displayStudentTable(showPresentOnly = false) {
+        const studentTableBody = document.getElementById("studentTableBody");
+        studentTableBody.innerHTML = "";
+
+        const filteredStudents = showPresentOnly
+            ? students.filter(student => student.present)
+            : students;
+
+        filteredStudents.forEach((student, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${student.id}</td>
+                <td>${student.name}</td>
+                <td>${student.course}</td>
+                <td>${student.semester}</td>
+                <td>
+                    <input type="checkbox" ${student.present ? 'checked' : ''} onchange="togglePresent(${index})">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger" onclick="deleteStudent(${index})">Delete</button>
+                </td>
+            `;
+            studentTableBody.appendChild(row);
+        });
+
+        // Show/hide the add student form based on the flag
+        const addStudentForm = document.getElementById("addStudentForm");
+        addStudentForm.style.display = isAddStudentFormVisible ? 'block' : 'none';
+    }
+
+    function clearForm() {
+        document.getElementById("id").value = "";
+        document.getElementById("name").value = "";
+        document.getElementById("course").value = "";
+        document.getElementById("semester").value = "";
+    }
+
+    function generatePDF() {
+        const element = document.getElementById("studentTableBody");
+        const showPresentOnly = document.getElementById("presentFilter").checked;
+        const filteredStudents = showPresentOnly
+            ? students.filter(student => student.present)
+            : students;
+
+        // Create a new HTML element with the present students and their data
+        const filteredTableBody = document.createElement("tbody");
+        filteredStudents.forEach(student => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${student.id}</td>
+                <td>${student.name}</td>
+                <td>${student.course}</td>
+                <td>${student.semester}</td>
+                <td>${student.present ? 'Present' : 'Absent'}</td>
+            `;
+            filteredTableBody.appendChild(row);
+        });
+
+        // Create a new HTML element with the filtered table
+        const filteredTable = document.createElement("table");
+        filteredTable.classList.add("pdfTable"); // Add a class to apply styles
+        filteredTable.appendChild(filteredTableBody);
+
+        // Create a header with the university name, current date and time, and program
+        const header = document.createElement("div");
+        const currentDate = new Date().toLocaleString(); // Change to toLocaleString() to include time
+        header.innerHTML = `
+            <div class="universityName">Sam Higginbottom University of Agriculture, Technology And Sciences (SHUATS)</div>
+            <div>${currentDate}</div>
+            <div>Master of Computer Application Attendance Sheet</div>
+        `;
+        header.id = "pdfHeader";
+
+        // Combine the header and filtered table into a wrapper div
+        const wrapper = document.createElement("div");
+        wrapper.appendChild(header);
+        wrapper.appendChild(filteredTable);
+
+        // Generate PDF from the wrapper div
+        html2pdf(wrapper, {
+            margin: 10,
+            filename: 'Attendance_Sheet.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        });
+    }
+
+    // Display student table and add student form visibility on page load
+    displayStudentTable();
+	
+	
+	
+	
+	
+</script>
+
+</body>
+</html>
